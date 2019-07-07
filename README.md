@@ -23,7 +23,7 @@ pip install -e .
 pip install -r requirements.txt
 ```
 
-## Training
+## Training example
 
 ### Navi
 
