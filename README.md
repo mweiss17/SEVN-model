@@ -19,6 +19,7 @@ pip install -e .
 
 # Other requirements
 pip install -r requirements.txt
+pip install tensorflow
 ```
 
 ## Training
