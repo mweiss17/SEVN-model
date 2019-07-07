@@ -19,8 +19,7 @@ class Policy(nn.Module):
                  obs_shape,
                  action_space,
                  base=None,
-                 base_kwargs=None,
-                 navi=False):
+                 base_kwargs=None):
         super(Policy, self).__init__()
         if base_kwargs is None:
             base_kwargs = {}
@@ -36,8 +35,7 @@ class Policy(nn.Module):
         if action_space.__class__.__name__ == "Discrete":
             num_outputs = action_space.n
             net_outputs = self.base.output_size
-            if navi:
-                net_outputs = 256*10
+            net_outputs = 256*10
             self.dist = Categorical(net_outputs, num_outputs)
         elif action_space.__class__.__name__ == "Box":
             num_outputs = action_space.shape[0]
@@ -93,9 +91,8 @@ class RandomPolicy(Policy):
                  obs_shape,
                  action_space,
                  base=None,
-                 base_kwargs=None,
-                 navi=False):
-        super(RandomPolicy, self).__init__(obs_shape, action_space, base, base_kwargs, navi)
+                 base_kwargs=None):
+        super(RandomPolicy, self).__init__(obs_shape, action_space, base, base_kwargs)
         self.action_space = action_space
 
     @property

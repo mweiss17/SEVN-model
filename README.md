@@ -30,15 +30,15 @@ pip install -r requirements.txt
 #### PPO
 
 ```bash
-python main.py --env-name "Dummy-Stateful-v0" --custom-gym a2c_ppo_acktr --algo ppo --use-gae --lr 2.5e-4 --clip-param 0.1 --value-loss-coef 0.5 --num-processes 1 --num-steps 128 --num-mini-batch 4 --log-interval 1 --use-linear-lr-decay --entropy-coef 0.01 --comet fgolemo/navi/XXXXXXXXXXXXXXXXXXXXXXXXX --navi
+python main.py --env-name "SEVN-Explorer-v1" --custom-gym SEVN_gym --algo ppo --use-gae --lr 5e-4 --clip-param 0.1 --value-loss-coef 0.5 --num-processes 1 --num-steps 256 --num-mini-batch 4 --log-interval 1 --use-linear-lr-decay --entropy-coef 0.01 --comet mweiss17/navi-corl-2019/UcVgpp0wPaprHG4w8MFVMgq7j --seed 0 --num-env-steps 10000000
 ```
 
 ## Enjoy
 
-Load a pretrained model from [my Google Drive](https://drive.google.com/open?id=0Bw49qC_cgohKS3k2OWpyMWdzYkk).
+Load a pretrained model
 
 
 ## Results
 
-### PPO
+
 

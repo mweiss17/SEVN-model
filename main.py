@@ -51,17 +51,14 @@ def main():
 
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, args.log_dir, device, False,
-                         args.custom_gym, args.navi)
-    base = None
-    if args.navi:
-        base = NaviBase
+                         args.custom_gym)
+    base = NaviBase
     obs_shape = envs.observation_space.shape
 
     actor_critic = Policy(
         obs_shape,
         envs.action_space,
         base_kwargs={'recurrent': args.recurrent_policy},
-        navi=args.navi,
         base=base,
     )
     actor_critic.to(device)
@@ -92,7 +89,6 @@ def main():
         actor_critic = RandomPolicy(obs_shape,
                                     envs.action_space,
                                     base_kwargs={'recurrent': args.recurrent_policy},
-                                    navi=args.navi,
                                     base=base,
                                     )
     elif args.algo == 'acktr':
@@ -152,7 +148,7 @@ def main():
                 if 'episode' in info.keys():
                     episode_rewards.append(info['episode']['r'])
                     episode_length.append(info['episode']['l'])
-                    if "Pacman" not in args.env_name:
+                    if "Explorer" not in args.env_name:
                         episode_success_rate.append(info['was_successful_trajectory'])
                     episode_total += 1
 
@@ -218,7 +214,7 @@ def main():
                 experiment.log_metric("Episode Length Min", np.min(episode_length), step=total_num_steps)
                 experiment.log_metric("Episode Length Max", np.max(episode_length), step=total_num_steps)
                 experiment.log_metric("# Trajectories (Total)", j, step=total_num_steps)
-                if "Pacman" not in args.env_name:
+                if "Explorer" not in args.env_name:
                     experiment.log_metric("Episodic Success Rate", np.mean(episode_success_rate), step=total_num_steps)
             print(
                 "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
