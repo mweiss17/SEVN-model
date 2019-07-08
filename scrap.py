@@ -36,11 +36,6 @@ parser.add_argument(
     '--custom-gym',
     default='',
     help='import some dependency package for thew gym env')
-parser.add_argument(
-    '--navi',
-    action='store_true',
-    default=False,
-    help='use the custom dictionary observation from the navi project')
 args = parser.parse_args()
 
 args.det = not args.non_det
@@ -53,8 +48,7 @@ env = make_vec_envs(
     None,
     device='cpu',
     allow_early_resets=False,
-    custom_gym=args.custom_gym,
-    navi=args.navi
+    custom_gym=args.custom_gym
 )
 
 # Get a render function

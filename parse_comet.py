@@ -1,7 +1,7 @@
 from comet_ml import API
 import numpy as np
 api = API()
-exp_ids = {"Hyrule-Mini-All-Shaped-v1": "mweiss17/navi-corl-2019/164622b85b0645de8bfbecea9ae249c6", "pacman": "mweiss17/navi-corl-2019/40be0457f4174377963abe5da282a944"}
+exp_ids = {"SEVN-Mini-All-Shaped-v1": "mweiss17/navi-corl-2019/164622b85b0645de8bfbecea9ae249c6"}
 
 for name, exp_id in exp_ids.items():
     import pdb; pdb.set_trace()
