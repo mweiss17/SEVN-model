@@ -33,12 +33,6 @@ pip install -r requirements.txt
 python main.py --env-name "SEVN-Explorer-v1" --custom-gym SEVN_gym --algo ppo --use-gae --lr 5e-4 --clip-param 0.1 --value-loss-coef 0.5 --num-processes 1 --num-steps 256 --num-mini-batch 4 --log-interval 1 --use-linear-lr-decay --entropy-coef 0.01 --comet mweiss17/navi-corl-2019/UcVgpp0wPaprHG4w8MFVMgq7j --seed 0 --num-env-steps 10000000
 ```
 
-## Enjoy
-
-Load a pretrained model
-
-
-## Results
 
 
 
