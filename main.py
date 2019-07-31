@@ -11,6 +11,11 @@ import requests.utils
 import requests.adapters
 requests.utils.DEFAULT_CA_BUNDLE_PATH = override_where()
 requests.adapters.DEFAULT_CA_BUNDLE_PATH = override_where()
+import requests
+resp = requests.get('http://comet.ml')
+print("ASDFSDFSDF")
+print(resp)
+
 
 try:
     from comet_ml import Experiment
