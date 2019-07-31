@@ -1,28 +1,9 @@
-import os
-def override_where():
-    """ overrides certifi.core.where to return actual location of cacert.pem"""
-    return os.path.abspath("ca-bundle.crt")
-
-import certifi.core
-os.environ["REQUESTS_CA_BUNDLE"] = override_where()
-certifi.core.where = override_where
-
-import requests.utils
-import requests.adapters
-requests.utils.DEFAULT_CA_BUNDLE_PATH = override_where()
-requests.adapters.DEFAULT_CA_BUNDLE_PATH = override_where()
-import requests
-resp = requests.get('http://comet.ml')
-print("ASDFSDFSDF")
-print(resp)
-
-
-try:
-    from comet_ml import Experiment
-    comet_loaded = True
-except ImportError:
-    comet_loaded = False
-
+# try:
+#     from comet_ml import Experiment
+#     comet_loaded = True
+# except ImportError:
+#     comet_loaded = False
+comet_loaded = False
 import os
 import time
 from collections import deque
@@ -41,7 +22,6 @@ from evaluation import evaluate
 
 def main():
     args = get_args()
-
     if comet_loaded and len(args.comet) > 0:
         comet_credentials = args.comet.split("/")
         experiment = Experiment(
@@ -52,7 +32,10 @@ def main():
             experiment.log_parameter(key, value)
     else:
         experiment = None
-
+        with open("results.csv", "w+") as f:
+            for key, value in vars(args).items():
+                f.write(f"{key}, {value}\n")
+            f.close()
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
@@ -211,7 +194,7 @@ def main():
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or
                 j == num_updates - 1) and args.save_dir != "":
-            save_path = os.path.join(args.save_dir, args.algo, args.seed)
+            save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
             try:
                 os.makedirs(save_path)
             except OSError:
@@ -235,6 +218,18 @@ def main():
                 experiment.log_metric("# Trajectories (Total)", j, step=total_num_steps)
                 if "Explorer" not in args.env_name:
                     experiment.log_metric("Episodic Success Rate", np.mean(episode_success_rate), step=total_num_steps)
+            else:
+                with open("results.csv", "a") as f:
+                    f.write(f"Reward Mean, {np.mean(episode_rewards)}, {total_num_steps}\n")
+                    f.write(f"Reward Min, {np.min(episode_rewards)}, {total_num_steps}\n")
+                    f.write(f"Reward Max, {np.max(episode_rewards)}, {total_num_steps}\n")
+                    f.write(f"Episode Length Mean, {np.mean(episode_rewards)}, {total_num_steps}\n")
+                    f.write(f"Episode Length Min, {np.min(episode_rewards)}, {total_num_steps}\n")
+                    f.write(f"Episode Length Max, {np.max(episode_rewards)}, {total_num_steps}\n")
+                    f.write(f"# Trajectories (Total), {j}, {total_num_steps}\n")
+                    if "Explorer" not in args.env_name:
+                        f.write(f"Episodic Success Rate, {np.mean(episode_success_rate)}, {total_num_steps}\n")
+                    f.close()
             print(
                 "Updates {}, num timesteps {}, FPS {} \n Last {} training episodes: mean/median reward {:.1f}/{:.1f}, min/max reward {:.1f}/{:.1f}\n"
                 .format(j, total_num_steps,
