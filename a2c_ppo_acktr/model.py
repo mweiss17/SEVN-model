@@ -310,9 +310,9 @@ class NaviBase(NNBase):
                                constant_(x, 0))
 
         self.fusion = nn.Sequential(
-            init_dense(nn.Linear(self.total_hidden_size, self.total_hidden_size)),
+            init_dense(nn.Linear(total_hidden_size, total_hidden_size)),
             nn.Tanh(),
-            init_dense(nn.Linear(self.total_hidden_size, self.total_hidden_size)),
+            init_dense(nn.Linear(total_hidden_size, total_hidden_size)),
             nn.Tanh())
 
         self.critic_linear = init_(nn.Linear(total_hidden_size, 1))
