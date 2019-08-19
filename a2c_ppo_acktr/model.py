@@ -308,12 +308,12 @@ class NaviBase(NNBase):
 
         init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
                                constant_(x, 0))
-
-        self.fusion = nn.Sequential(
-            init_dense(nn.Linear(total_hidden_size, total_hidden_size)),
-            nn.Tanh(),
-            init_dense(nn.Linear(total_hidden_size, total_hidden_size)),
-            nn.Tanh())
+        #
+        # self.fusion = nn.Sequential(
+        #     init_dense(nn.Linear(total_hidden_size, total_hidden_size)),
+        #     nn.Tanh(),
+        #     init_dense(nn.Linear(total_hidden_size, total_hidden_size)),
+        #     nn.Tanh())
 
         self.critic_linear = init_(nn.Linear(total_hidden_size, 1))
 
@@ -359,6 +359,6 @@ class NaviBase(NNBase):
             vis_sn_e = torch.cat((vis_sn_e, vis_sn_embed), dim=1)
 
         x = torch.cat((img_e, rel_gps_e, abs_gps_e, goal_hn_e, goal_sn_e, vis_hn_e, vis_sn_e), dim=1)
-        x = self.fusion(x)
+        # x = self.fusion(x)
 
         return self.critic_linear(x), x, rnn_hxs
