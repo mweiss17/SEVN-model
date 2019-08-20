@@ -29,6 +29,10 @@ parser.add_argument(
     default='./trained_models/ppo/',
     help='directory to save agent logs (default: ./trained_models/)')
 parser.add_argument(
+    '--load-model',
+    default='./trained_models/ppo/0/SEVN-Mini-All-Shaped-v1.pt',
+    help='a path to a particular model')
+parser.add_argument(
     '--custom-gym',
     default='SEVN_gym',
     help='The gym to load from')
@@ -55,8 +59,12 @@ env = make_vec_envs(
 render_func = get_render_func(env)
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, ob_rms = \
-            torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location='cpu')
+if args.load_dir:
+    actor_critic, ob_rms = \
+                torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location='cpu')
+else:
+    actor_critic, ob_rms = \
+                torch.load(args.load_model, map_location='cpu')
 
 vec_norm = get_vec_normalize(env)
 if vec_norm is not None:
