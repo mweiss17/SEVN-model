@@ -193,17 +193,23 @@ def main():
 
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or
-                j == num_updates - 1) and args.save_dir != "":
+                j == num_updates - 1) and args.save_dir != "" and j > args.save_after:
             save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
             try:
                 os.makedirs(save_path)
             except OSError:
                 pass
 
-            torch.save([
-                actor_critic,
-                getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
-            ], os.path.join(save_path, args.env_name + ".pt"))
+            if args.save_multiple:
+                torch.save([
+                    actor_critic,
+                    getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
+                ], os.path.join(save_path, str(j) + "-" + args.env_name + ".pt"))
+            else:
+                torch.save([
+                    actor_critic,
+                    getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
+                ], os.path.join(save_path, args.env_name + ".pt"))
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
