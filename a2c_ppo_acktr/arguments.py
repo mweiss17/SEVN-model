@@ -157,6 +157,16 @@ def get_args():
         action='store_true',
         default=False,
         help='use a linear schedule on the learning rate')
+    parser.add_argument(
+        '--save-after',
+        type=int,
+        default=7000,
+        help='start saving models after x updates')
+    parser.add_argument(
+        '--save-multiple',
+        action='store_true',
+        default=False,
+        help='save multiple models so we can check which are good')
     args = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
