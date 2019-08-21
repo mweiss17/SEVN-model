@@ -57,12 +57,17 @@ def main():
     base = NaviBase
     obs_shape = envs.observation_space.shape
 
-    actor_critic = Policy(
-        obs_shape,
-        envs.action_space,
-        base_kwargs={'recurrent': args.recurrent_policy},
-        base=base,
-    )
+    if args.continue_model:
+        actor_critic, ob_rms = \
+                    torch.load(args.continue_model, map_location='cpu')
+    else:
+        actor_critic = Policy(
+            obs_shape,
+            envs.action_space,
+            base_kwargs={'recurrent': args.recurrent_policy},
+            base=base,
+        )
+
     actor_critic.to(device)
 
     if args.algo == 'a2c':

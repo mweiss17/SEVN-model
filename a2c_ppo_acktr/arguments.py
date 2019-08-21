@@ -167,6 +167,9 @@ def get_args():
         action='store_true',
         default=False,
         help='save multiple models so we can check which are good')
+    parser.add_argument(
+        '--continue-model',
+        help='continue training from model weights')
     args = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
