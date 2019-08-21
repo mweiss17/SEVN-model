@@ -26,7 +26,7 @@ parser.add_argument(
     help='environment to train on (default: PongNoFrameskip-v4)')
 parser.add_argument(
     '--load-dir',
-    default='./trained_models/ppo/',
+    default=None,
     help='directory to save agent logs (default: ./trained_models/)')
 parser.add_argument(
     '--load-model',
@@ -59,7 +59,7 @@ env = make_vec_envs(
 render_func = get_render_func(env)
 
 # We need to use the same statistics for normalization as used in training
-if args.load_dir:
+if args.load_dir is not None:
     actor_critic, ob_rms = \
                 torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location='cpu')
 else:
