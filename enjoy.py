@@ -2,6 +2,7 @@ import argparse
 import os
 # workaround to unpickle olf model files
 import sys
+import time
 
 import numpy as np
 import torch
@@ -25,11 +26,15 @@ parser.add_argument(
     help='environment to train on (default: PongNoFrameskip-v4)')
 parser.add_argument(
     '--load-dir',
-    default='./trained_models/',
+    default=None,
     help='directory to save agent logs (default: ./trained_models/)')
 parser.add_argument(
+    '--load-model',
+    default='./trained_models/ppo/0/SEVN-Mini-All-Shaped-v1.pt',
+    help='a path to a particular model')
+parser.add_argument(
     '--custom-gym',
-    default='hyrule_gym',
+    default='SEVN_gym',
     help='The gym to load from')
 parser.add_argument(
     '--non-det',
@@ -54,8 +59,12 @@ env = make_vec_envs(
 render_func = get_render_func(env)
 
 # We need to use the same statistics for normalization as used in training
-actor_critic, ob_rms = \
-            torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location='cpu')
+if args.load_dir is not None:
+    actor_critic, ob_rms = \
+                torch.load(os.path.join(args.load_dir, args.env_name + ".pt"), map_location='cpu')
+else:
+    actor_critic, ob_rms = \
+                torch.load(args.load_model, map_location='cpu')
 
 vec_norm = get_vec_normalize(env)
 if vec_norm is not None:
@@ -67,18 +76,30 @@ recurrent_hidden_states = torch.zeros(1,
 masks = torch.zeros(1, 1)
 
 obs = env.reset()
-
-if render_func is not None:
-    render_func('rgb_array')
+render_func('rgb_array', clear=True, first_time=True)
 
 while True:
-    with torch.no_grad():
-        value, action, _, recurrent_hidden_states = actor_critic.act(
-            obs, recurrent_hidden_states, masks, deterministic=args.det)
-    # Obser reward and next obs
-    obs, reward, done, _ = env.step(action)
-    print(f"action: {action}, reward: {reward}, done: {done}")
-    masks.fill_(0.0 if done else 1.0)
+    i = 0
+    done = False
+    start = time.time()
+    r = 0
 
-    if render_func is not None:
-        render_func('rgb_array')
+    while i < 300 and not done:
+        print(i)
+        with torch.no_grad():
+            value, action, _, recurrent_hidden_states = actor_critic.act(
+                obs, recurrent_hidden_states, masks, deterministic=args.det)
+        # Obser reward and next obs
+        obs, reward, done, _ = env.step(action)
+        r += reward
+        print("reward: " + str(r))
+        print(f"action: {action}, reward: {reward}, done: {done}")
+        masks.fill_(0.0 if done else 1.0)
+        print("acted: " + str(time.time() - start))
+        start = time.time()
+        if render_func is not None:
+            render_func('rgb_array', clear=False, first_time=False)
+        print("rendered: " + str(time.time() - start))
+
+        i += 1
+    render_func('rgb_array', clear=True, first_time=False)
