@@ -3,7 +3,6 @@ try:
     comet_loaded = True
 except ImportError:
     comet_loaded = False
-comet_loaded = False
 import os
 import time
 from collections import deque
