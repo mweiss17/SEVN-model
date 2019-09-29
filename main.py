@@ -21,7 +21,6 @@ from evaluation import evaluate
 
 def main():
     args = get_args()
-    comet_loaded=False
     if comet_loaded and len(args.comet) > 0:
         comet_credentials = args.comet.split("/")
         experiment = Experiment(
