@@ -214,6 +214,24 @@ def main():
 
         rollouts.after_update()
 
+        # Run on test
+        for step in range(args.num_steps):
+            # Sample actions
+            with torch.no_grad():
+                value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
+                    test_rollouts.obs[step], test_rollouts.recurrent_hidden_states[step],
+                    test_rollouts.masks[step])
+
+                # Observe reward and next obs
+                obs, reward, done, infos = test_envs.step(action)
+                for idx, info in enumerate(infos):
+                    if 'episode' in info.keys():
+                        test_episode_rewards.append(info['episode']['r'])
+                        test_episode_length.append(info['episode']['l'])
+                        test_episode_success_rate.append(info['was_successful_trajectory'])
+                        test_episode_total += 1
+
+
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or
                 j == num_updates - 1) and args.save_dir != "" and j > args.save_after:
@@ -269,22 +287,7 @@ def main():
                         action_loss))
 
             # Test Generalization
-            if "Train" in args.env_name:
-                for step in range(args.num_steps):
-                    # Sample actions
-                    with torch.no_grad():
-                        value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
-                            test_rollouts.obs[step], test_rollouts.recurrent_hidden_states[step],
-                            test_rollouts.masks[step])
-
-                        # Observe reward and next obs
-                        obs, reward, done, infos = test_envs.step(action)
-                        for idx, info in enumerate(infos):
-                            if 'episode' in info.keys():
-                                test_episode_rewards.append(info['episode']['r'])
-                                test_episode_length.append(info['episode']['l'])
-                                test_episode_success_rate.append(info['was_successful_trajectory'])
-                                test_episode_total += 1
+            if j % args.log_interval == 0 and len(test_episode_rewards) > 1 and "Train" in args.env_name:
                 masks = torch.FloatTensor(
                     [[0.0] if done_ else [1.0] for done_ in done])
                 bad_masks = torch.FloatTensor(
