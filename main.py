@@ -275,7 +275,7 @@ def main():
                             test_rollouts.masks[step])
 
                         # Observe reward and next obs
-                        obs, reward, done, infos = envs.step(action)
+                        obs, reward, done, infos = test_envs.step(action)
                         for idx, info in enumerate(infos):
                             if 'episode' in info.keys():
                                 test_episode_rewards.append(info['episode']['r'])
@@ -295,7 +295,7 @@ def main():
                         test_rollouts.obs[-1],test_rollouts.recurrent_hidden_states[-1],
                         test_rollouts.masks[-1]).detach()
                 test_rollouts.after_update()
-
+                import pdb; pdb.set_trace()
                 print(f"(mean) Test rewards: {np.mean(test_episode_rewards)}, Test Episode Length: {np.mean(test_episode_length)}, Test Episode Success Rate: {np.mean(test_episode_success_rate)}")
 
 
