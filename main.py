@@ -21,6 +21,7 @@ from evaluation import evaluate
 
 def main():
     args = get_args()
+    results_filename = f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv"
     if comet_loaded and len(args.comet) > 0:
         comet_credentials = args.comet.split("/")
         experiment = Experiment(
@@ -31,7 +32,7 @@ def main():
             experiment.log_parameter(key, value)
     else:
         experiment = None
-        with open(f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv", "w+") as f:
+        with open(results_filename, "w+") as f:
             for key, value in vars(args).items():
                 f.write(f"{key}, {value}\n")
             f.close()
@@ -53,6 +54,11 @@ def main():
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, args.log_dir, device, False,
                          args.custom_gym)
+
+    if "Train" in args.env_name:
+        test_envs = make_vec_envs(args.env_name.replace("Train", "Test"), args.seed, args.num_processes,
+                             args.gamma, args.log_dir, device, False,
+                             args.custom_gym)
     base = NaviBase
     obs_shape = envs.observation_space.shape
 
@@ -121,13 +127,24 @@ def main():
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size)
 
+    test_rollouts = RolloutStorage(args.num_steps, args.num_processes,
+                                   envs.observation_space.shape, envs.action_space,
+                                   actor_critic.recurrent_hidden_state_size)
+
     obs = envs.reset()
     rollouts.obs[0].copy_(obs)
     rollouts.to(device)
 
+    test_obs = test_envs.reset()
+    test_rollouts.obs[0].copy_(test_obs)
+    test_rollouts.to(device)
+
     episode_rewards = deque(maxlen=10)
     episode_length = deque(maxlen=10)
     episode_success_rate = deque(maxlen=100)
+    test_episode_rewards = deque(maxlen=10)
+    test_episode_length = deque(maxlen=10)
+    test_episode_success_rate = deque(maxlen=100)
     episode_total = 0
 
     start = time.time()
@@ -229,7 +246,7 @@ def main():
                 if "Explorer" not in args.env_name:
                     experiment.log_metric("Episodic Success Rate", np.mean(episode_success_rate), step=total_num_steps)
             else:
-                with open("results.csv", "a") as f:
+                with open(results_filename, "a") as f:
                     f.write(f"Reward Mean, {np.mean(episode_rewards)}, {total_num_steps}\n")
                     f.write(f"Reward Min, {np.min(episode_rewards)}, {total_num_steps}\n")
                     f.write(f"Reward Max, {np.max(episode_rewards)}, {total_num_steps}\n")
@@ -248,6 +265,39 @@ def main():
                         np.median(episode_rewards), np.min(episode_rewards),
                         np.max(episode_rewards), dist_entropy, value_loss,
                         action_loss))
+            if "Train" in args.env_name:
+                print("Printing Generalization performance")
+                for step in range(args.num_steps):
+                    # Sample actions
+                    with torch.no_grad():
+                        value, action, action_log_prob, recurrent_hidden_states = actor_critic.act(
+                            test_rollouts.obs[step], test_rollouts.recurrent_hidden_states[step],
+                            test_rollouts.masks[step])
+
+                        # Observe reward and next obs
+                        obs, reward, done, infos = envs.step(action)
+                        for idx, info in enumerate(infos):
+                            if 'episode' in info.keys():
+                                test_episode_rewards.append(info['episode']['r'])
+                                test_episode_length.append(info['episode']['l'])
+                                test_episode_success_rate.append(info['was_successful_trajectory'])
+                                episode_total += 1
+                masks = torch.FloatTensor(
+                    [[0.0] if done_ else [1.0] for done_ in done])
+                bad_masks = torch.FloatTensor(
+                    [[0.0] if 'bad_transition' in info.keys() else [1.0]
+                     for info in infos])
+                test_rollouts.insert(obs, recurrent_hidden_states, action,
+                                action_log_prob, value, reward, masks, bad_masks)
+
+                with torch.no_grad():
+                    next_value = actor_critic.get_value(
+                        test_rollouts.obs[-1],test_rollouts.recurrent_hidden_states[-1],
+                        test_rollouts.masks[-1]).detach()
+                test_rollouts.after_update()
+
+                print(f"(mean) Test rewards: {np.mean(test_episode_rewards)}, Test Episode Length: {np.mean(test_episode_length)}, Test Episode Success Rate: {np.mean(test_episode_success_rate)}")
+
 
         if (args.eval_interval is not None and len(episode_rewards) > 1 and
                 j % args.eval_interval == 0):
