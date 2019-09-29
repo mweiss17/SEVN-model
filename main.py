@@ -267,8 +267,9 @@ def main():
                         np.median(episode_rewards), np.min(episode_rewards),
                         np.max(episode_rewards), dist_entropy, value_loss,
                         action_loss))
+
+            # Test Generalization
             if "Train" in args.env_name:
-                print("Printing Generalization performance")
                 for step in range(args.num_steps):
                     # Sample actions
                     with torch.no_grad():
@@ -297,7 +298,17 @@ def main():
                         test_rollouts.obs[-1], test_rollouts.recurrent_hidden_states[-1],
                         test_rollouts.masks[-1]).detach()
                 test_rollouts.after_update()
+
                 print(f"Test Episode Total: {test_episode_total}, Mean Test rewards: {np.mean(test_episode_rewards)}, Test Episode Length: {np.mean(test_episode_length)}, Test Episode Success Rate: {np.mean(test_episode_success_rate)}")
+                test_total_num_steps = (j + 1) * args.num_steps
+                experiment.log_metric("Test Reward Mean", np.mean(test_episode_rewards), step=test_total_num_steps)
+                experiment.log_metric("Test Reward Min", np.min(test_episode_rewards), step=test_total_num_steps)
+                experiment.log_metric("Test Reward Max", np.max(test_episode_rewards), step=test_total_num_steps)
+                experiment.log_metric("Test Episode Length Mean ", np.mean(test_episode_length), step=test_total_num_steps)
+                experiment.log_metric("Test Episode Length Min", np.min(test_episode_length), step=test_total_num_steps)
+                experiment.log_metric("Test Episode Length Max", np.max(test_episode_length), step=test_total_num_steps)
+                experiment.log_metric("# Test Trajectories (Total)", j)
+                experiment.log_metric("Test Episodic Success Rate", np.mean(test_episode_success_rate), step=test_total_num_steps)
 
 
         if (args.eval_interval is not None and len(episode_rewards) > 1 and
