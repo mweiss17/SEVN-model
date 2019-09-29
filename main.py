@@ -21,6 +21,7 @@ from evaluation import evaluate
 
 def main():
     args = get_args()
+    comet_loaded=False
     if comet_loaded and len(args.comet) > 0:
         comet_credentials = args.comet.split("/")
         experiment = Experiment(
@@ -31,7 +32,7 @@ def main():
             experiment.log_parameter(key, value)
     else:
         experiment = None
-        with open("results.csv", "w+") as f:
+        with open(f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv", "w+") as f:
             for key, value in vars(args).items():
                 f.write(f"{key}, {value}\n")
             f.close()
