@@ -142,10 +142,12 @@ def main():
     episode_rewards = deque(maxlen=10)
     episode_length = deque(maxlen=10)
     episode_success_rate = deque(maxlen=100)
+    episode_total = 0
+
     test_episode_rewards = deque(maxlen=10)
     test_episode_length = deque(maxlen=10)
     test_episode_success_rate = deque(maxlen=100)
-    episode_total = 0
+    test_episode_total = 0
 
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
@@ -281,7 +283,7 @@ def main():
                                 test_episode_rewards.append(info['episode']['r'])
                                 test_episode_length.append(info['episode']['l'])
                                 test_episode_success_rate.append(info['was_successful_trajectory'])
-                                episode_total += 1
+                                test_episode_total += 1
                 masks = torch.FloatTensor(
                     [[0.0] if done_ else [1.0] for done_ in done])
                 bad_masks = torch.FloatTensor(
@@ -292,11 +294,10 @@ def main():
 
                 with torch.no_grad():
                     next_value = actor_critic.get_value(
-                        test_rollouts.obs[-1],test_rollouts.recurrent_hidden_states[-1],
+                        test_rollouts.obs[-1], test_rollouts.recurrent_hidden_states[-1],
                         test_rollouts.masks[-1]).detach()
                 test_rollouts.after_update()
-                import pdb; pdb.set_trace()
-                print(f"(mean) Test rewards: {np.mean(test_episode_rewards)}, Test Episode Length: {np.mean(test_episode_length)}, Test Episode Success Rate: {np.mean(test_episode_success_rate)}")
+                print(f"Test Episode Total: {test_episode_total}, Mean Test rewards: {np.mean(test_episode_rewards)}, Test Episode Length: {np.mean(test_episode_length)}, Test Episode Success Rate: {np.mean(test_episode_success_rate)}")
 
 
         if (args.eval_interval is not None and len(episode_rewards) > 1 and
