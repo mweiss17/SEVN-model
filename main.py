@@ -127,7 +127,7 @@ def main():
                               envs.observation_space.shape, envs.action_space,
                               actor_critic.recurrent_hidden_state_size)
 
-    test_rollouts = RolloutStorage(args.num_steps, args.num_processes,
+    test_rollouts = RolloutStorage(args.num_steps, 1,
                                    envs.observation_space.shape, envs.action_space,
                                    actor_critic.recurrent_hidden_state_size)
 
