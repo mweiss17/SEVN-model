@@ -56,7 +56,7 @@ def main():
                          args.custom_gym)
 
     if "Train" in args.env_name:
-        test_envs = make_vec_envs(args.env_name.replace("Train", "Test"), args.seed, args.num_processes,
+        test_envs = make_vec_envs(args.env_name.replace("Train", "Test"), args.seed, 1,
                              args.gamma, args.log_dir, device, False,
                              args.custom_gym)
     base = NaviBase
