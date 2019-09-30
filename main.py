@@ -22,6 +22,7 @@ from evaluation import evaluate
 def main():
     args = get_args()
     results_filename = f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv"
+    save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
     if comet_loaded and len(args.comet) > 0:
         comet_credentials = args.comet.split("/")
         experiment = Experiment(
@@ -62,16 +63,18 @@ def main():
     base = NaviBase
     obs_shape = envs.observation_space.shape
 
-    if args.continue_model:
-        actor_critic, ob_rms = \
-                    torch.load(args.continue_model, map_location='cpu')
-    else:
-        actor_critic = Policy(
-            obs_shape,
-            envs.action_space,
-            base_kwargs={'recurrent': args.recurrent_policy},
-            base=base,
-        )
+        try:
+            os.makedirs(save_path)
+            actor_critic, ob_rms = \
+                        torch.load(save_path, map_location='cpu')
+        except Exception:
+            # create a new model
+            actor_critic = Policy(
+                obs_shape,
+                envs.action_space,
+                base_kwargs={'recurrent': args.recurrent_policy},
+                base=base,
+            )
 
     actor_critic.to(device)
 
@@ -236,12 +239,6 @@ def main():
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or
                 j == num_updates - 1) and args.save_dir != "" and j > args.save_after:
-            save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
-            try:
-                os.makedirs(save_path)
-            except OSError:
-                pass
-
             if args.save_multiple:
                 torch.save([
                     actor_critic,
