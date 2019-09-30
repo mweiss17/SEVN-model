@@ -63,18 +63,18 @@ def main():
     base = NaviBase
     obs_shape = envs.observation_space.shape
 
-        try:
-            os.makedirs(save_path)
-            actor_critic, ob_rms = \
-                        torch.load(save_path, map_location='cpu')
-        except Exception:
-            # create a new model
-            actor_critic = Policy(
-                obs_shape,
-                envs.action_space,
-                base_kwargs={'recurrent': args.recurrent_policy},
-                base=base,
-            )
+    try:
+        os.makedirs(save_path)
+        actor_critic, ob_rms = \
+                    torch.load(save_path, map_location='cpu')
+    except Exception:
+        # create a new model
+        actor_critic = Policy(
+            obs_shape,
+            envs.action_space,
+            base_kwargs={'recurrent': args.recurrent_policy},
+            base=base,
+        )
 
     actor_critic.to(device)
 
