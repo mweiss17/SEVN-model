@@ -1,5 +1,5 @@
 try:
-    from comet_ml import Experiment
+    from comet_ml import Experiment, ExistingExperiment
     comet_loaded = True
 except ImportError:
     comet_loaded = False
@@ -25,20 +25,7 @@ def main():
     args = get_args()
     results_filename = f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv"
     save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
-    if comet_loaded and len(args.comet) > 0:
-        comet_credentials = args.comet.split("/")
-        experiment = Experiment(
-            api_key=comet_credentials[2],
-            project_name=comet_credentials[1],
-            workspace=comet_credentials[0])
-        for key, value in vars(args).items():
-            experiment.log_parameter(key, value)
-    else:
-        experiment = None
-        with open(results_filename, "w+") as f:
-            for key, value in vars(args).items():
-                f.write(f"{key}, {value}\n")
-            f.close()
+
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
@@ -99,6 +86,20 @@ def main():
         test_episode_length = pickle.load(open(os.path.join(save_path, args.env_name + "-test_episode_length.pkl"), 'rb'))
         test_episode_success_rate = pickle.load(open(os.path.join(save_path, args.env_name + "-test_episode_success_rate.pkl"), 'rb'))
 
+        if comet_loaded and len(args.comet) > 0:
+            comet_credentials = args.comet.split("/")
+            experiment = ExistingExperiment(
+                api_key=comet_credentials[2],
+                previous_experiment=j['comet_id'])
+            for key, value in vars(args).items():
+                experiment.log_parameter(key, value)
+        else:
+            experiment = None
+            with open(results_filename, "a") as f:
+                for key, value in vars(args).items():
+                    f.write(f"{key}, {value}\n")
+                f.close()
+
     except Exception:
         # create a new model
         actor_critic = Policy(
@@ -131,6 +132,21 @@ def main():
         test_episode_length = deque(maxlen=10)
         test_episode_success_rate = deque(maxlen=100)
         test_episode_total = 0
+
+        if comet_loaded and len(args.comet) > 0:
+            comet_credentials = args.comet.split("/")
+            experiment = Experiment(
+                api_key=comet_credentials[2],
+                project_name=comet_credentials[1],
+                workspace=comet_credentials[0])
+            for key, value in vars(args).items():
+                experiment.log_parameter(key, value)
+        else:
+            experiment = None
+            with open(results_filename, "w+") as f:
+                for key, value in vars(args).items():
+                    f.write(f"{key}, {value}\n")
+                f.close()
 
     actor_critic.to(device)
 
@@ -280,7 +296,7 @@ def main():
                     getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
                 ], os.path.join(save_path, args.env_name + ".pt"))
 
-                json.dump({'save_j': j, 'episode_total': episode_total, 'test_episode_total': test_episode_total}, open(os.path.join(save_path, args.env_name + "-state.json"), 'w+'))
+                json.dump({'save_j': j, 'episode_total': episode_total, 'test_episode_total': test_episode_total, 'comet_id': experiment.id}, open(os.path.join(save_path, args.env_name + "-state.json"), 'w+'))
                 pickle.dump(rollouts, open(os.path.join(save_path, args.env_name + "-rollout.pkl"), 'wb+'))
                 pickle.dump(test_rollouts, open(os.path.join(save_path, args.env_name + "-test-rollout.pkl"), 'wb+'))
                 pickle.dump(episode_rewards, open(os.path.join(save_path, args.env_name + "-episode_rewards.pkl"), 'wb+'))
