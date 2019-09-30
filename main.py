@@ -4,6 +4,8 @@ try:
 except ImportError:
     comet_loaded = False
 import os
+import json
+import pickle
 import time
 from collections import deque
 
@@ -63,10 +65,40 @@ def main():
     base = NaviBase
     obs_shape = envs.observation_space.shape
 
+    save_j = 0
     try:
         os.makedirs(save_path)
+    except FileExistsError:
+        pass
+
+    # Recover from job pre-emption
+    try:
         actor_critic, ob_rms = \
-                    torch.load(save_path, map_location='cpu')
+                    torch.load(os.path.join(save_path, args.env_name + ".pt"), map_location='cpu')
+        j = json.load(open(os.path.join(save_path, args.env_name + "-state.json"), 'r'))
+        save_j = j['save_j']
+        episode_total = j['episode_total']
+        test_episode_total = j['test_episode_total']
+
+        rollouts = pickle.load(open(os.path.join(save_path, args.env_name + "-rollout.pkl"), 'rb'))
+        rollouts.to(device)
+        obs = envs.reset()
+        rollouts.obs[0].copy_(obs)
+        rollouts.to(device)
+
+        test_rollouts = pickle.load(open(os.path.join(save_path, args.env_name + "-test-rollout.pkl"), 'rb'))
+        test_rollouts.to(device)
+        test_obs = test_envs.reset()
+        test_rollouts.obs[0].copy_(test_obs)
+        test_rollouts.to(device)
+
+        episode_rewards = pickle.load(open(os.path.join(save_path, args.env_name + "-episode_rewards.pkl"), 'rb'))
+        episode_length = pickle.load(open(os.path.join(save_path, args.env_name + "-episode_length.pkl"), 'rb'))
+        episode_success_rate = pickle.load(open(os.path.join(save_path, args.env_name + "-episode_success_rate.pkl"), 'rb'))
+        test_episode_rewards = pickle.load(open(os.path.join(save_path, args.env_name + "-test_episode_rewards.pkl"), 'rb'))
+        test_episode_length = pickle.load(open(os.path.join(save_path, args.env_name + "-test_episode_length.pkl"), 'rb'))
+        test_episode_success_rate = pickle.load(open(os.path.join(save_path, args.env_name + "-test_episode_success_rate.pkl"), 'rb'))
+
     except Exception:
         # create a new model
         actor_critic = Policy(
@@ -75,6 +107,30 @@ def main():
             base_kwargs={'recurrent': args.recurrent_policy},
             base=base,
         )
+        rollouts = RolloutStorage(args.num_steps, args.num_processes,
+                                  envs.observation_space.shape, envs.action_space,
+                                  actor_critic.recurrent_hidden_state_size)
+        obs = envs.reset()
+        rollouts.obs[0].copy_(obs)
+        rollouts.to(device)
+
+        test_rollouts = RolloutStorage(args.num_steps, 1,
+                                       envs.observation_space.shape, envs.action_space,
+                                       actor_critic.recurrent_hidden_state_size)
+        if "Train" in args.env_name:
+            test_obs = test_envs.reset()
+            test_rollouts.obs[0].copy_(test_obs)
+            test_rollouts.to(device)
+
+        episode_rewards = deque(maxlen=10)
+        episode_length = deque(maxlen=10)
+        episode_success_rate = deque(maxlen=100)
+        episode_total = 0
+
+        test_episode_rewards = deque(maxlen=10)
+        test_episode_length = deque(maxlen=10)
+        test_episode_success_rate = deque(maxlen=100)
+        test_episode_total = 0
 
     actor_critic.to(device)
 
@@ -126,36 +182,10 @@ def main():
             shuffle=True,
             drop_last=True)
 
-    rollouts = RolloutStorage(args.num_steps, args.num_processes,
-                              envs.observation_space.shape, envs.action_space,
-                              actor_critic.recurrent_hidden_state_size)
-
-    test_rollouts = RolloutStorage(args.num_steps, 1,
-                                   envs.observation_space.shape, envs.action_space,
-                                   actor_critic.recurrent_hidden_state_size)
-
-    obs = envs.reset()
-    rollouts.obs[0].copy_(obs)
-    rollouts.to(device)
-    if "Train" in args.env_name:
-        test_obs = test_envs.reset()
-        test_rollouts.obs[0].copy_(test_obs)
-        test_rollouts.to(device)
-
-    episode_rewards = deque(maxlen=10)
-    episode_length = deque(maxlen=10)
-    episode_success_rate = deque(maxlen=100)
-    episode_total = 0
-
-    test_episode_rewards = deque(maxlen=10)
-    test_episode_length = deque(maxlen=10)
-    test_episode_success_rate = deque(maxlen=100)
-    test_episode_total = 0
-
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
-    for j in range(num_updates):
-
+    for j in range(num_updates - save_j):
+        j = j + save_j
         if args.use_linear_lr_decay:
             # decrease learning rate linearly
             utils.update_linear_schedule(
@@ -249,6 +279,16 @@ def main():
                     actor_critic,
                     getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
                 ], os.path.join(save_path, args.env_name + ".pt"))
+
+                json.dump({'save_j': j, 'episode_total': episode_total, 'test_episode_total': test_episode_total}, open(os.path.join(save_path, args.env_name + "-state.json"), 'w+'))
+                pickle.dump(rollouts, open(os.path.join(save_path, args.env_name + "-rollout.pkl"), 'wb+'))
+                pickle.dump(test_rollouts, open(os.path.join(save_path, args.env_name + "-test-rollout.pkl"), 'wb+'))
+                pickle.dump(episode_rewards, open(os.path.join(save_path, args.env_name + "-episode_rewards.pkl"), 'wb+'))
+                pickle.dump(episode_length, open(os.path.join(save_path, args.env_name + "-episode_length.pkl"), 'wb+'))
+                pickle.dump(episode_success_rate, open(os.path.join(save_path, args.env_name + "-episode_success_rate.pkl"), 'wb+'))
+                pickle.dump(test_episode_rewards, open(os.path.join(save_path, args.env_name + "-test_episode_rewards.pkl"), 'wb+'))
+                pickle.dump(test_episode_length, open(os.path.join(save_path, args.env_name + "-test_episode_length.pkl"), 'wb+'))
+                pickle.dump(test_episode_success_rate, open(os.path.join(save_path, args.env_name + "-test_episode_success_rate.pkl"), 'wb+'))
 
         if j % args.log_interval == 0 and len(episode_rewards) > 1:
             total_num_steps = (j + 1) * args.num_processes * args.num_steps
