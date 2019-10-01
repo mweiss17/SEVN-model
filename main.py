@@ -42,12 +42,12 @@ def main():
     device = torch.device("cuda:0" if args.cuda else "cpu")
 
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                         args.gamma, args.log_dir, device, False,
+                         args.gamma, log_dir, device, False,
                          args.custom_gym)
 
     if "Train" in args.env_name:
         test_envs = make_vec_envs(args.env_name.replace("Train", "Test"), args.seed, 1,
-                             args.gamma, args.log_dir, device, False,
+                             args.gamma, log_dir, device, False,
                              args.custom_gym)
     base = NaviBase
     obs_shape = envs.observation_space.shape
