@@ -79,6 +79,7 @@ def main():
         test_rollouts.obs[0].copy_(test_obs)
         test_rollouts.to(device)
 
+        optimizer_state_dict = pickle.load(open(os.path.join(save_path, args.env_name + "-optim-state-dict.pkl"), 'rb'))
         episode_rewards = pickle.load(open(os.path.join(save_path, args.env_name + "-episode_rewards.pkl"), 'rb'))
         episode_length = pickle.load(open(os.path.join(save_path, args.env_name + "-episode_length.pkl"), 'rb'))
         episode_success_rate = pickle.load(open(os.path.join(save_path, args.env_name + "-episode_success_rate.pkl"), 'rb'))
@@ -198,6 +199,11 @@ def main():
             shuffle=True,
             drop_last=True)
 
+    try:
+        agent.optimizer.load_state_dict(optimizer_state_dict)
+    except Exception:
+        pass
+
     start = time.time()
     num_updates = int(args.num_env_steps) // args.num_steps // args.num_processes
     for j in range(num_updates - save_j):
@@ -295,8 +301,8 @@ def main():
                     actor_critic,
                     getattr(utils.get_vec_normalize(envs), 'ob_rms', None)
                 ], os.path.join(save_path, args.env_name + ".pt"))
-
                 json.dump({'save_j': j, 'episode_total': episode_total, 'test_episode_total': test_episode_total, 'comet_id': experiment.id}, open(os.path.join(save_path, args.env_name + "-state.json"), 'w+'))
+                pickle.dump(agent.optimizer.state_dict(),  open(os.path.join(save_path, args.env_name + "-optim-state-dict.pkl"), 'wb+'))
                 pickle.dump(rollouts, open(os.path.join(save_path, args.env_name + "-rollout.pkl"), 'wb+'))
                 pickle.dump(test_rollouts, open(os.path.join(save_path, args.env_name + "-test-rollout.pkl"), 'wb+'))
                 pickle.dump(episode_rewards, open(os.path.join(save_path, args.env_name + "-episode_rewards.pkl"), 'wb+'))
