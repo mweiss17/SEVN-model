@@ -16,7 +16,7 @@ from a2c_ppo_acktr import algo, utils
 from a2c_ppo_acktr.algo import gail
 from a2c_ppo_acktr.arguments import get_args
 from a2c_ppo_acktr.envs import make_vec_envs
-from a2c_ppo_acktr.model import Policy, RandomPolicy, NaviBase
+from a2c_ppo_acktr.model import Policy, RandomPolicy, NaviBase, NaviBaseTemp
 from a2c_ppo_acktr.storage import RolloutStorage
 from evaluation import evaluate
 
@@ -49,7 +49,7 @@ def main():
         test_envs = make_vec_envs(args.env_name.replace("Train", "Test"), args.seed, 1,
                              args.gamma, log_dir, device, False,
                              args.custom_gym)
-    base = NaviBase
+    base = NaviBaseTemp
     obs_shape = envs.observation_space.shape
 
     save_j = 0

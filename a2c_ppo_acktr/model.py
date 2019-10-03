@@ -35,7 +35,7 @@ class Policy(nn.Module):
         if action_space.__class__.__name__ == "Discrete":
             num_outputs = action_space.n
             net_outputs = self.base.output_size
-            net_outputs = 256*10
+            net_outputs = 256*2  # this was 256*10.
             self.dist = Categorical(net_outputs, num_outputs)
         elif action_space.__class__.__name__ == "Box":
             num_outputs = action_space.shape[0]
@@ -360,5 +360,79 @@ class NaviBase(NNBase):
 
         x = torch.cat((img_e, rel_gps_e, abs_gps_e, goal_hn_e, goal_sn_e, vis_hn_e, vis_sn_e), dim=1)
         x = self.fusion(x)
+
+        return self.critic_linear(x), x, rnn_hxs
+
+
+class NaviBaseTemp(NNBase):
+
+    def __init__(self,
+                 num_inputs,
+                 recurrent=False,
+                 num_streets=4,
+                 hidden_size=256,
+                 total_hidden_size=512
+                 ):
+        if recurrent:
+            raise NotImplementedError("recurrent policy not done yet")
+        super(NaviBaseTemp, self).__init__(recurrent, hidden_size, hidden_size)
+        self.num_streets = num_streets
+        init_cnn = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init
+                                  .constant_(x, 0),
+                                  nn.init.calculate_gain('relu'))
+        init_dense = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
+                                    constant_(x, 0), np.sqrt(2))
+
+        self.img_embed = nn.Sequential(
+            init_cnn(nn.Conv2d(9, 32, 3, stride=2)), nn.ReLU(),
+            init_cnn(nn.Conv2d(32, 64, 5, stride=2)), nn.ReLU(),
+            init_cnn(nn.Conv2d(64, 32, 5, stride=2)), nn.ReLU(), Flatten(),
+            init_cnn(nn.Linear(32 * 8 * 8, total_hidden_size)), nn.ReLU())
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
+                               constant_(x, 0))
+
+        self.number_embed = nn.Sequential(init_dense(nn.Linear(10, 4)), nn.ReLU())
+
+        self.critic_linear = init_(nn.Linear(total_hidden_size, 1))
+
+        self.train()
+
+    def forward(self, inputs, rnn_hxs, masks):
+        image = inputs[:, :3, :, :]
+        rel_gps = inputs[:, 3, 0, :2]
+        abs_gps = inputs[:, 3, 0, 2:4]
+        vis_street_names = inputs[:, 3, 1, :2*self.num_streets]
+        vis_house_numbers = torch.cat([inputs[:, 3, 2, :84], inputs[:, 3, 3, :36]], dim=1)
+        goal_house_numbers = inputs[:, 3, 4, :40]
+        goal_street_name = inputs[:, 3, 4, 40:40 + self.num_streets]
+
+        goal_hn_e = torch.tensor([])
+        vis_hn_e = torch.tensor([])
+        if torch.cuda.is_available():
+            goal_hn_e = goal_hn_e.cuda()
+            vis_hn_e = vis_hn_e.cuda()
+
+        for i in range(4):
+            goal_hn_embed = self.number_embed(goal_house_numbers[:, i*10:(i+1)*10])
+            goal_hn_e = torch.cat((goal_hn_e, goal_hn_embed), dim=1)
+
+        for j in range(3):
+            offset = j*40
+            for i in range(4):
+                vis_hn_embed = self.number_embed(vis_house_numbers[:, offset+(i*10):offset+((i+1)*10)])
+                vis_hn_e = torch.cat((vis_hn_e, vis_hn_embed), dim=1)
+
+        # Duplicate all signals spatially and cat with image
+        rel_gps = rel_gps.repeat(1, 3528).view(-1, 1, 84, 84)
+        abs_gps = abs_gps.repeat(1, 3528).view(-1, 1, 84, 84)
+        vis_street_names = vis_street_names.repeat(1, 882).view(-1, 1, 84, 84)
+        vis_hn_e = vis_hn_e.repeat(1, 147).view(-1, 1, 84, 84)
+        goal_hn_e = goal_hn_e.repeat(1, 441).view(-1, 1, 84, 84)
+        goal_street_name = goal_street_name.repeat(1, 1764).view(-1, 1, 84, 84)
+
+        x = torch.cat((image, rel_gps, abs_gps, vis_street_names, vis_hn_e, goal_hn_e, goal_street_name), dim=1)
+
+        x = self.img_embed(x)
 
         return self.critic_linear(x), x, rnn_hxs
