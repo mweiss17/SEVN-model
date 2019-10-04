@@ -3,6 +3,10 @@ from _warnings import warn
 from comet_ml import API
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
+sns.set(style="darkgrid")
+
 
 api = API()
 reported_metrics = ["Reward Mean", "Episodic Success Rate", "Episode Length Mean "]
@@ -56,10 +60,10 @@ gps_exp_ids = {
 }
 
 plot_info = {
-    "SEVN-Test-NoisyGPS-1-v1": {'color': '#fde724', 'plot_name': 'NoisyGPS-1'},
-    "SEVN-Test-NoisyGPS-5-v1": {'color': '#fde724', 'plot_name': 'NoisyGPS-5'},
-    "SEVN-Test-NoisyGPS-25-v1": {'color': '#fde724', 'plot_name': 'NoisyGPS-25'},
-    "SEVN-Test-NoisyGPS-100-v1": {'color': '#fde724', 'plot_name': 'NoisyGPS-100'},
+    "SEVN-Test-NoisyGPS-1": {'color': '#404387', 'plot_name': 'NoisyGPS-1'},
+    "SEVN-Test-NoisyGPS-5": {'color': '#22a784', 'plot_name': 'NoisyGPS-5'},
+    "SEVN-Test-NoisyGPS-25": {'color': '#fde724', 'plot_name': 'NoisyGPS-25'},
+    "SEVN-Test-NoisyGPS-100": {'color': '#29788e', 'plot_name': 'NoisyGPS-100'},
 }
 
 gps_exp_data = {}
@@ -106,32 +110,37 @@ for name, exp_id in gps_exp_ids.items():
     if exp in name:
         exps[exp].append(gps_exp_data[name])
 
-compiled_data = defaultdict(dict)
+compiled_data = []
 for name, data in exps.items():
+    c_data = {'name': name}
     for metric in reported_metrics:
-        c_data = {}
-        for idx, seed in enumerate(data):
-            c_data[idx] = seed[metric]['raw_data']
-        import pdb; pdb.set_trace()
-        compiled_data[data] = c_data
+        try:
+            trials = np.concatenate([np.expand_dims(data[0][metric]['raw_data'][1], axis=0), np.expand_dims(data[1][metric]['raw_data'][1], axis=0), np.expand_dims(data[2][metric]['raw_data'][1], axis=0)], axis=0)
+        except Exception as e:
+            continue
+        mean = trials.mean(axis=0)
+        std = trials.std(axis=0)
+        c_data[metric] = np.concatenate([np.expand_dims(data[0][metric]['raw_data'][0], axis=0), np.expand_dims(mean, axis=0), np.expand_dims(std, axis=0)], axis=0)
+    compiled_data.append(c_data)
 
-
-# Plotting Statistics
 for metric in reported_metrics:
-    fig = plt.figure()
-    plt.title(metric, fontsize=18)
-    plt.xlabel('Timesteps', fontsize=14)
-    plt.ylabel(metric, fontsize=14)
+    # fig = plt.figure()
+    # plt.title(metric, fontsize=18)
+    # plt.xlabel('Timesteps', fontsize=14)
+    # plt.ylabel(metric, fontsize=14)
+    for data in compiled_data:
+        color = plot_info[data['name']]['color']
+        label = plot_info[data['name']]['plot_name']
+        try:
+            import pdb; pdb.set_trace()
+            to_plot = pd.DataFrame(data[metric].T, columns=['timestep', 'mean', 'std'])
+            sns.lineplot(x="Timesteps", y=metric, data=to_plot)
+            # plt.errorbar(data[metric][0], data[metric][1], yerr=data[metric][2], color=color, label=label, alpha=0.5)
+        except Exception:
+            pass
+        # plt.plot(running_mean(data[0], 100), running_mean(data[1], 100), color, label=label)
 
-    for key, val in gps_exp_data.items():
-        key = "-".join(key.split('-')[:5])
-        color = plot_info[key]['color']
-        label = plot_info[key]['plot_name']
-
-        data = val[metric]["raw_data"]
-        plt.plot(running_mean(data[0], 100), running_mean(data[1], 100), color, label=label)
-
-    plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
-    plt.legend(fontsize=14)
-    plt.savefig('plots/gps_exp'+metric + ".png")
-
+    # plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
+    # plt.legend(fontsize=14)
+    # plt.savefig('plots/gps_exp'+metric + ".png")
+    #
