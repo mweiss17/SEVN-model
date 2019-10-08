@@ -103,12 +103,20 @@ def main():
 
     except Exception:
         # create a new model
-        actor_critic = Policy(
-            obs_shape,
-            envs.action_space,
-            base_kwargs={'recurrent': args.recurrent_policy},
-            base=base,
-        )
+        # actor_critic = Policy(
+        #     obs_shape,
+        #     envs.action_space,
+        #     base_kwargs={'recurrent': args.recurrent_policy},
+        #     base=base,
+        # )
+        actor_critic = RandomPolicy(obs_shape,
+                                    envs.action_space,
+                                    base_kwargs={'recurrent': args.recurrent_policy},
+                                    base=base,
+                                    )
+        agent = algo.RANDOM_AGENT(actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True)
+
+
         rollouts = RolloutStorage(args.num_steps, args.num_processes,
                                   envs.observation_space.shape, envs.action_space,
                                   actor_critic.recurrent_hidden_state_size)
