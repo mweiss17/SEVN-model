@@ -12,12 +12,11 @@ from collections import deque
 import numpy as np
 import torch
 
-from a2c_ppo_acktr import algo, utils
-from a2c_ppo_acktr.algo import gail
-from a2c_ppo_acktr.arguments import get_args
-from a2c_ppo_acktr.envs import make_vec_envs
-from a2c_ppo_acktr.model import Policy, RandomPolicy, NaviBase, NaviBaseTemp
-from a2c_ppo_acktr.storage import RolloutStorage
+from sevn_model import algo, utils
+from sevn_model.arguments import get_args
+from sevn_model.envs import make_vec_envs
+from sevn_model.model import Policy, RandomPolicy, NaviBase, NaviBaseTemp
+from sevn_model.storage import RolloutStorage
 from evaluation import evaluate
 
 
@@ -151,16 +150,7 @@ def main():
 
     actor_critic.to(device)
 
-    if args.algo == 'a2c':
-        agent = algo.A2C_ACKTR(
-            actor_critic,
-            args.value_loss_coef,
-            args.entropy_coef,
-            lr=args.lr,
-            eps=args.eps,
-            alpha=args.alpha,
-            max_grad_norm=args.max_grad_norm)
-    elif args.algo == 'ppo':
+    if args.algo == 'ppo':
         agent = algo.PPO(
             actor_critic,
             args.clip_param,
@@ -172,33 +162,13 @@ def main():
             eps=args.eps,
             max_grad_norm=args.max_grad_norm)
     elif args.algo == 'random':
-        agent = algo.RANDOM_AGENT(actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True)
+        agent = algo.RANDOM_AGENT(actor_critic, args.value_loss_coef, args.entropy_coef)
 
         actor_critic = RandomPolicy(obs_shape,
                                     envs.action_space,
                                     base_kwargs={'recurrent': args.recurrent_policy},
                                     base=base,
                                     )
-    elif args.algo == 'acktr':
-        agent = algo.A2C_ACKTR(
-            actor_critic, args.value_loss_coef, args.entropy_coef, acktr=True)
-
-    if args.gail:
-        assert len(envs.observation_space.shape) == 1
-        discr = gail.Discriminator(
-            envs.observation_space.shape[0] + envs.action_space.shape[0], 100,
-            device)
-        file_name = os.path.join(
-            args.gail_experts_dir,
-            "trajs_{}.pt".format(args.env_name.split('-')[0].lower()))
-
-        gail_train_loader = torch.utils.data.DataLoader(
-            gail.ExpertDataset(
-                file_name, num_trajectories=4, subsample_frequency=20),
-            batch_size=args.gail_batch_size,
-            shuffle=True,
-            drop_last=True)
-
     try:
         agent.optimizer.load_state_dict(optimizer_state_dict)
     except Exception:
@@ -211,8 +181,7 @@ def main():
         if args.use_linear_lr_decay:
             # decrease learning rate linearly
             utils.update_linear_schedule(
-                agent.optimizer, j, num_updates,
-                agent.optimizer.lr if args.algo == "acktr" else args.lr)
+                agent.optimizer, j, num_updates, args.lr)
 
         print("args.num_steps: " + str(args.num_steps))
         for step in range(args.num_steps):
@@ -245,22 +214,6 @@ def main():
             next_value = actor_critic.get_value(
                 rollouts.obs[-1], rollouts.recurrent_hidden_states[-1],
                 rollouts.masks[-1]).detach()
-
-        if args.gail:
-            if j >= 10:
-                envs.venv.eval()
-
-            gail_epoch = args.gail_epoch
-            if j < 10:
-                gail_epoch = 100  # Warm up
-            for _ in range(gail_epoch):
-                discr.update(gail_train_loader, rollouts,
-                             utils.get_vec_normalize(envs)._obfilt)
-
-            for step in range(args.num_steps):
-                rollouts.rewards[step] = discr.predict_reward(
-                    rollouts.obs[step], rollouts.actions[step], args.gamma,
-                    rollouts.masks[step])
 
         rollouts.compute_returns(next_value, args.use_gae, args.gamma,
                                  args.gae_lambda, args.use_proper_time_limits)

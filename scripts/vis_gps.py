@@ -29,12 +29,12 @@ def build_plot_dict(orig_env_name, raw_tuples, final_data, log_ts):
         # If same experiment with different seed
         if env_name in final_data:
             final_data[env_name]['n'] += 1
-            data_concat = np.vstack((final_data[env_name]['data'], data[1, :]))
-            final_data[env_name]['data'] = data_concat
+            data_concat = np.vstack((final_data[env_name]['data0'], data[1, :]))
+            final_data[env_name]['data0'] = data_concat
 
         # If first experiment with these hyperparams.
         else:
-            final_data[env_name] = {'metric': reported_metrics[i], 'data': data, 'n': 1}
+            final_data[env_name] = {'metric': reported_metrics[i], 'data0': data, 'n': 1}
 
     return final_data
 
@@ -135,10 +135,10 @@ for metric in reported_metrics:
             import pdb; pdb.set_trace()
             to_plot = pd.DataFrame(data[metric].T, columns=['timestep', 'mean', 'std'])
             sns.lineplot(x="Timesteps", y=metric, data=to_plot)
-            # plt.errorbar(data[metric][0], data[metric][1], yerr=data[metric][2], color=color, label=label, alpha=0.5)
+            # plt.errorbar(data0[metric][0], data0[metric][1], yerr=data0[metric][2], color=color, label=label, alpha=0.5)
         except Exception:
             pass
-        # plt.plot(running_mean(data[0], 100), running_mean(data[1], 100), color, label=label)
+        # plt.plot(running_mean(data0[0], 100), running_mean(data0[1], 100), color, label=label)
 
     # plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
     # plt.legend(fontsize=14)

@@ -49,12 +49,12 @@ def build_plot_dict(orig_env_name, raw_tuples, final_data, log_ts):
         # If same experiment with different seed
         if env_name in final_data:
             final_data[env_name]['n'] += 1
-            data_concat = np.vstack((final_data[env_name]['data'], data[1, :]))
-            final_data[env_name]['data'] = data_concat
+            data_concat = np.vstack((final_data[env_name]['data0'], data[1, :]))
+            final_data[env_name]['data0'] = data_concat
 
         # If first experiment with these hyperparams.
         else:
-            final_data[env_name] = {'metric': reported_metrics[i], 'data': data, 'n': 1}
+            final_data[env_name] = {'metric': reported_metrics[i], 'data0': data, 'n': 1}
 
     return final_data
 
@@ -87,7 +87,7 @@ for name, exp_id in exp_ids.items():
                                  final_data=final_data,
                                  log_ts=logged_timesteps)
 
-# Random-Oracle data
+# Random-Oracle data0
 # random_oracle_data = {}
 # for name, exp_id in oracle_random_ids.items():
 #     random_oracle_data[name] = {}
@@ -127,12 +127,12 @@ for metric in reported_metrics:
             color = plot_info[key]['color']
             label = plot_info[key]['plot_name']
 
-            met_mean = np.mean(val['data'][1:], axis=0)
-            met_std = np.std(val['data'][1:], axis=0)
+            met_mean = np.mean(val['data0'][1:], axis=0)
+            met_std = np.std(val['data0'][1:], axis=0)
 
-            plt.fill_between(running_mean(val['data'][0], 10), running_mean(met_mean - met_std, 10),
+            plt.fill_between(running_mean(val['data0'][0], 10), running_mean(met_mean - met_std, 10),
                              running_mean(met_mean + met_std, 10), alpha=0.1, facecolor=color)
-            plt.plot(running_mean(val['data'][0], 10), running_mean(met_mean, 10), color, label=label)
+            plt.plot(running_mean(val['data0'][0], 10), running_mean(met_mean, 10), color, label=label)
 
     plt.ticklabel_format(style='sci', axis='x', scilimits=(0, 0))
     plt.legend(fontsize=14)
@@ -143,15 +143,15 @@ for metric in reported_metrics:
 for key, val in final_data.items():
     print(key)
     if val['metric'] == reported_metrics[0]:
-        print("Reward Mean. Mean of the last 10 log intervals:", np.mean(np.mean(val['data'][1:], axis=0)[-10:]))
+        print("Reward Mean. Mean of the last 10 log intervals:", np.mean(np.mean(val['data0'][1:], axis=0)[-10:]))
     elif val['metric'] == reported_metrics[1]:
-        print("Success Rate. Mean of max success rates:", np.mean(np.max(val['data'][1:, -100:], axis=1)))
+        print("Success Rate. Mean of max success rates:", np.mean(np.max(val['data0'][1:, -100:], axis=1)))
     elif val['metric'] == reported_metrics[2]:
-        print("Episode Length Mean. Mean of the last 10 log intervals:", np.mean(np.mean(val['data'][1:], axis=0)[-10:]))
+        print("Episode Length Mean. Mean of the last 10 log intervals:", np.mean(np.mean(val['data0'][1:], axis=0)[-10:]))
     print("------------------------------------------------------------------------------------------------")
 
 
-# GPS data
+# GPS data0
 # 4 procs only
 gps_exp_ids = {
     "SEVN-Test-NoisyGPS-1-v1-s0-10p": "mweiss17/navi-corl-2019/2d3670a8af1e4c9d83f06a889e02862e",
