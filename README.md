@@ -1,6 +1,8 @@
 # SEVN Model
-This repository is an extension of https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail.
-We
+
+In this repository you'll find the code used to train the multi-modal agents on SEVN. 
+These agents can take in images, scene-text, and gps to navigate to goal addresses.
+This repository was forked from [this PPO repository](https://github.com/ikostrikov/pytorch-a2c-ppo-acktr-gail).
 
 ## Installation
 
