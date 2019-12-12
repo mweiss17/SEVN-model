@@ -24,7 +24,7 @@ def main():
     args = get_args()
     results_filename = f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv"
     save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
-
+    print("asdf")
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
@@ -39,7 +39,6 @@ def main():
 
     torch.set_num_threads(1)
     device = torch.device("cuda:0" if args.cuda else "cpu")
-
     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
                          args.gamma, log_dir, device, False,
                          args.custom_gym)
@@ -240,6 +239,27 @@ def main():
                             test_episode_success_rate.append(info['was_successful_trajectory'])
                             test_episode_total += 1
 
+        # Increment curriculum
+        if np.mean(test_episode_success_rate) > 0.5:
+            level = int(args.env_name.split("-")[-2]) + 1
+            split = args.env_name.split("-")
+            split[-2] = str(level)
+            env_name = "-".join(split)
+            args.env_name = env_name
+            envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+                                 args.gamma, log_dir, device, False,
+                                 args.custom_gym)
+            test_envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+                                 args.gamma, log_dir, device, False,
+                                 args.custom_gym)
+            obs = envs.reset()
+            rollouts.obs[0].copy_(obs)
+            rollouts.to(device)
+            test_obs = test_envs.reset()
+            test_rollouts.obs[0].copy_(test_obs)
+            test_rollouts.to(device)
+
+            print(f"graduation to level: {level}")
 
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or
