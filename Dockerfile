@@ -6,6 +6,10 @@ RUN git clone https://github.com/openai/baselines.git
 RUN pip install -e baselines/
 RUN useradd -m -d $HOME $USER
 RUN chown -R $USER $HOME
+CMD ["/bin/bash"]
+
+RUN apt-get update
+RUN apt-get  -y  install vim
+
 USER $USER
 WORKDIR $HOME
-CMD ["/bin/bash"]

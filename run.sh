@@ -14,4 +14,5 @@ python /home/dockeruser/SEVN-model/main.py --env-name "SEVN-Train-AllObs-Shaped-
 --entropy-coef 0.01 \
 --comet mweiss17/navi-corl-2019/UcVgpp0wPaprHG4w8MFVMgq7j \
 --seed 0 \
---num-env-steps 1000000
+--num-env-steps 1000000 \
+--save-dir /home/dockeruser/data/trained_models/

@@ -24,7 +24,6 @@ def main():
     args = get_args()
     results_filename = f"logs/{args.env_name}-seed-{args.seed}-num-steps-{args.num_steps}-num-env-steps-{args.num_env_steps}-results.csv"
     save_path = os.path.join(args.save_dir, args.algo, str(args.seed))
-    print("asdf")
     torch.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
@@ -110,6 +109,7 @@ def main():
         rollouts = RolloutStorage(args.num_steps, args.num_processes,
                                   envs.observation_space.shape, envs.action_space,
                                   actor_critic.recurrent_hidden_state_size)
+        import pdb; pdb.set_trace()
         obs = envs.reset()
         rollouts.obs[0].copy_(obs)
         rollouts.to(device)
