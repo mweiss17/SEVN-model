@@ -15,7 +15,7 @@ import torch
 from sevn_model import algo, utils
 from sevn_model.arguments import get_args
 from sevn_model.envs import make_vec_envs
-from sevn_model.model import Policy, RandomPolicy, NaviBase, NaviBaseTemp
+from sevn_model.model import Policy, RandomPolicy, NaviBase, NaviBaseTemp, NaviBasePano
 from sevn_model.storage import RolloutStorage
 from evaluation import evaluate
 
@@ -43,11 +43,11 @@ def main():
                          args.gamma, log_dir, device, False,
                          args.custom_gym)
 
-    if "Train" in args.env_name:
+    if "Train" in args.env_name or "Action" in args.env_name:
         test_envs = make_vec_envs(args.env_name.replace("Train", "Test"), args.seed, 1,
                              args.gamma, log_dir, device, False,
                              args.custom_gym)
-    base = NaviBaseTemp
+    base = NaviBasePano
     obs_shape = envs.observation_space.shape
 
     save_j = 0
@@ -117,7 +117,7 @@ def main():
         test_rollouts = RolloutStorage(args.num_steps, 1,
                                        envs.observation_space.shape, envs.action_space,
                                        actor_critic.recurrent_hidden_state_size)
-        if "Train" in args.env_name:
+        if "Train" in args.env_name or "Action" in args.env_name:
             test_obs = test_envs.reset()
             test_rollouts.obs[0].copy_(test_obs)
             test_rollouts.to(device)
@@ -220,9 +220,9 @@ def main():
         value_loss, action_loss, dist_entropy = agent.update(rollouts)
 
         rollouts.after_update()
-
+        print(f"episode_length: {episode_length}")
         # Run on test
-        if "Train" in args.env_name:
+        if "Train" in args.env_name or "Action" in args.env_name:
             for step in range(args.num_steps):
                 # Sample actions
                 with torch.no_grad():
@@ -240,26 +240,27 @@ def main():
                             test_episode_total += 1
 
         # Increment curriculum
-        if np.mean(test_episode_success_rate) > 0.5:
-            level = int(args.env_name.split("-")[-2]) + 1
-            split = args.env_name.split("-")
-            split[-2] = str(level)
-            env_name = "-".join(split)
-            args.env_name = env_name
-            envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                                 args.gamma, log_dir, device, False,
-                                 args.custom_gym)
-            test_envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
-                                 args.gamma, log_dir, device, False,
-                                 args.custom_gym)
-            obs = envs.reset()
-            rollouts.obs[0].copy_(obs)
-            rollouts.to(device)
-            test_obs = test_envs.reset()
-            test_rollouts.obs[0].copy_(test_obs)
-            test_rollouts.to(device)
-
-            print(f"graduation to level: {level}")
+        # if np.mean(test_episode_success_rate) > 0.9:
+        #     print("Graduated!")
+        #     level = int(args.env_name.split("-")[-2]) + 1
+        #     split = args.env_name.split("-")
+        #     split[-2] = str(level)
+        #     env_name = "-".join(split)
+        #     args.env_name = env_name
+        #     envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+        #                          args.gamma, log_dir, device, False,
+        #                          args.custom_gym)
+        #     test_envs = make_vec_envs(args.env_name, args.seed, args.num_processes,
+        #                          args.gamma, log_dir, device, False,
+        #                          args.custom_gym)
+        #     obs = envs.reset()
+        #     rollouts.obs[0].copy_(obs)
+        #     rollouts.to(device)
+        #     test_obs = test_envs.reset()
+        #     test_rollouts.obs[0].copy_(test_obs)
+        #     test_rollouts.to(device)
+        #
+        #     print(f"graduation to level: {level}")
 
         # save for every interval-th episode or for the last epoch
         if (j % args.save_interval == 0 or
@@ -320,7 +321,7 @@ def main():
                         action_loss))
 
             # Test Generalization
-            if "Train" in args.env_name and j % args.log_interval == 0 and len(test_episode_rewards) > 1:
+            if ("Train" in args.env_name or "Action" in args.env_name) and j % args.log_interval == 0 and len(test_episode_rewards) > 1:
                 masks = torch.FloatTensor(
                     [[0.0] if done_ else [1.0] for done_ in done])
                 bad_masks = torch.FloatTensor(

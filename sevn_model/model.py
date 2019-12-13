@@ -394,5 +394,48 @@ class NaviBaseTemp(NNBase):
         self.train()
 
     def forward(self, inputs, rnn_hxs, masks):
+        init_cnn = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init
+                                  .constant_(x, 0),
+                                  nn.init.calculate_gain('relu'))
+
+        self.img_embed = nn.Sequential(
+            init_cnn(nn.Conv2d(8, 96, 3, stride=2)), nn.ReLU(),
+            init_cnn(nn.Conv2d(96, 96, 5, stride=2)), nn.ReLU(),
+            init_cnn(nn.Conv2d(96, 32, 5, stride=2)), nn.ReLU(), Flatten(),
+            init_cnn(nn.Linear(32 * 8 * 8, 512)), nn.ReLU())
+
+        x = self.img_embed(inputs)
+        return self.critic_linear(x), x, rnn_hxs
+
+class NaviBasePano(NNBase):
+
+    def __init__(self,
+                 num_inputs,
+                 recurrent=False,
+                 num_streets=4,
+                 hidden_size=256,
+                 total_hidden_size=512
+                 ):
+        if recurrent:
+            raise NotImplementedError("recurrent policy not done yet")
+        super(NaviBasePano, self).__init__(recurrent, hidden_size, hidden_size)
+        self.num_streets = num_streets
+        init_cnn = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init
+                                  .constant_(x, 0),
+                                  nn.init.calculate_gain('relu'))
+
+        self.img_embed = nn.Sequential(
+            init_cnn(nn.Conv2d(8, 32, 3, stride=2)), nn.ReLU(),
+            init_cnn(nn.Conv2d(32, 32, 5, stride=2)), nn.ReLU(),
+            init_cnn(nn.Conv2d(32, 8, 5, stride=2)), nn.ReLU(), Flatten(),
+            init_cnn(nn.Linear(1600, total_hidden_size)), nn.ReLU())
+
+        init_ = lambda m: init(m, nn.init.orthogonal_, lambda x: nn.init.
+                               constant_(x, 0))
+
+        self.critic_linear = init_(nn.Linear(total_hidden_size, 1))
+        self.train()
+
+    def forward(self, inputs, rnn_hxs, masks):
         x = self.img_embed(inputs)
         return self.critic_linear(x), x, rnn_hxs
